@@ -67,20 +67,26 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <webView contentMode="scaleToFill" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7Cx-Vw-VLF">
+                            <webView contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="7Cx-Vw-VLF">
                                 <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                             </webView>
+                            <activityIndicatorView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="NTD-D9-ZZZ">
+                                <rect key="frame" x="290" y="290" width="20" height="20"/>
+                            </activityIndicatorView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstItem="7Cx-Vw-VLF" firstAttribute="leading" secondItem="p7M-5z-P05" secondAttribute="leadingMargin" id="04N-gG-gJb"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="7Cx-Vw-VLF" secondAttribute="trailing" constant="-16" id="16O-SU-ykE"/>
+                            <constraint firstItem="QPb-Pq-KV5" firstAttribute="top" secondItem="NTD-D9-ZZZ" secondAttribute="bottom" constant="290" id="5xI-fy-rk0"/>
                             <constraint firstItem="7Cx-Vw-VLF" firstAttribute="top" secondItem="p7M-5z-P05" secondAttribute="topMargin" id="DcS-Fe-C6E"/>
-                            <constraint firstAttribute="trailingMargin" secondItem="7Cx-Vw-VLF" secondAttribute="trailing" id="fqn-My-K5u"/>
+                            <constraint firstItem="7Cx-Vw-VLF" firstAttribute="leading" secondItem="p7M-5z-P05" secondAttribute="leadingMargin" constant="-16" id="bMd-5h-cmP"/>
+                            <constraint firstItem="NTD-D9-ZZZ" firstAttribute="centerX" secondItem="7Cx-Vw-VLF" secondAttribute="centerX" id="k3j-ve-6IK"/>
                             <constraint firstItem="QPb-Pq-KV5" firstAttribute="top" secondItem="7Cx-Vw-VLF" secondAttribute="bottom" id="xfa-Gq-fxE"/>
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="activityIndicator" destination="NTD-D9-ZZZ" id="T3m-fa-VtO"/>
                         <outlet property="wikiPage" destination="7Cx-Vw-VLF" id="mxb-zi-WM9"/>
                     </connections>
                 </viewController>

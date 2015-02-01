@@ -9,14 +9,17 @@
 #import "PKWikiSearchTableViewController.h"
 #import "AFNetworking.h"
 #import "PKWikiPageViewController.h"
+#import "UIScrollView+SVInfiniteScrolling.h"
 
-static NSString * const baseURL =@"http://en.wikipedia.org/w/";
+
+static NSString * const baseURL =@"http://en.wikipedia.org/w/api.php";
 
 @interface PKWikiSearchTableViewController ()<UISearchBarDelegate>
 
 @property (strong, nonatomic) IBOutlet UISearchBar *searchBar;
 
 @property (strong, nonatomic) NSMutableArray *searchResults;
+@property (strong, nonatomic)NSString *searchTitle;
 
 @end
 
@@ -32,12 +35,21 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
     return _searchResults;
 }
 
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.navigationController.navigationBar.barTintColor = [UIColor blackColor];
+    __weak PKWikiSearchTableViewController *weakSelf = self;
+    
+    self.navigationController.navigationBar.barTintColor = [UIColor grayColor];
     self.navigationController.navigationBar.translucent = NO;
+    self.navigationItem.backBarButtonItem.tintColor = [UIColor blackColor];
     self.searchBar.delegate = self;
+    
+    // setup infinite scrolling
+    [self.tableView addInfiniteScrollingWithActionHandler:^{
+        [weakSelf performSearch:weakSelf.searchTitle andOffset: (int)([weakSelf.searchResults count] + 1)];
+    }];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -65,7 +77,8 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
 {
     //call a method that performs search asynchronously and sets the result array
     [self.searchResults removeAllObjects];
-    [self performSearch:self.searchBar.text];
+    self.searchTitle = self.searchBar.text;
+    [self performSearch:self.searchTitle andOffset:0];
     
     [self.searchBar setShowsCancelButton:NO animated:YES];
     [self.searchBar resignFirstResponder];
@@ -75,25 +88,26 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
 
 #pragma mark - helper methods
 
-- (void)performSearch:(NSString *)searchItem
+- (void)performSearch:(NSString *)searchItem andOffset:(int)offset
 {
-    NSString *pagelimit = [NSString stringWithFormat:@"%i", 50];
+    NSString *pageLimit = [NSString stringWithFormat:@"%i", 15];
     AFHTTPRequestOperationManager *manager = [AFHTTPRequestOperationManager manager];
     manager.responseSerializer = [AFJSONResponseSerializer serializer];
     NSDictionary *parameters = @{
                                  @"format" : @"json",
                                  @"action" : @"query",
-                                 @"srlimit":pagelimit,
+                                 @"sroffset":@(offset),
+                                 @"srlimit":pageLimit,
                                  @"srprop" : @"timestamp",
                                  @"srsearch" : searchItem,
                                  @"list" : @"search"
                                  };
     [self fetchDataWithParameters:parameters success:^(AFHTTPRequestOperation *operation, id responseObject) {
         NSDictionary *returnedResult = (NSDictionary *)responseObject;
-        self.searchResults = [returnedResult[@"query"][@"search"] mutableCopy];
         
+        [self parseData:returnedResult[@"query"][@"search"]];
         [self.tableView reloadData];
-        
+        [self.tableView.infiniteScrollingView stopAnimating];
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error searching"
                                                             message:[error localizedDescription]
@@ -101,6 +115,7 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
                                                   cancelButtonTitle:@"Ok"
                                                   otherButtonTitles:nil];
         [alertView show];
+        [self.tableView.infiniteScrollingView stopAnimating];
     }];
     
     
@@ -113,15 +128,18 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
                          failure:(void (^)(AFHTTPRequestOperation *operation, NSError *error))failure
 
 {
-    AFHTTPRequestOperationManager *manager = [AFHTTPRequestOperationManager manager];
-    manager.responseSerializer = [AFJSONResponseSerializer serializer];
-    [manager.requestSerializer setCachePolicy:NSURLRequestReturnCacheDataElseLoad];
-    AFHTTPRequestOperation *operation =[manager GET:@"http://en.wikipedia.org/w/api.php"
-                                         parameters:parameters
-                                            success:success failure:failure];
-    [operation setCacheResponseBlock:^NSCachedURLResponse *(NSURLConnection *connection, NSCachedURLResponse *cachedResponse) {
-        return cachedResponse;
-    }];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        AFHTTPRequestOperationManager *manager = [AFHTTPRequestOperationManager manager];
+        manager.responseSerializer = [AFJSONResponseSerializer serializer];
+        [manager.requestSerializer setCachePolicy:NSURLRequestReturnCacheDataElseLoad];
+        AFHTTPRequestOperation *operation =[manager GET:baseURL
+                                             parameters:parameters
+                                                success:success failure:failure];
+        [operation setCacheResponseBlock:^NSCachedURLResponse *(NSURLConnection *connection, NSCachedURLResponse *cachedResponse) {
+            return cachedResponse;
+        }];
+    });
+    
 }
 
 
@@ -140,6 +158,14 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
                                           timeStyle:NSDateFormatterShortStyle];
     
 }
+
+- (void)parseData:(NSArray *)fetchedData
+{
+    for (NSDictionary *dictionary in fetchedData) {
+        [self.searchResults addObject:dictionary];
+    }
+}
+
 
 #pragma mark - Table view data source
 
@@ -162,11 +188,12 @@ static NSString * const baseURL =@"http://en.wikipedia.org/w/";
     // Configure the cell...
     NSDictionary *result = [[NSDictionary alloc] initWithDictionary:self.searchResults[indexPath.row]];
     cell.textLabel.text = result[@"title"];
-    cell.detailTextLabel.text = [self timeStampToDate:result[@"timestamp"]];
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"Last updated on: %@",[self timeStampToDate:result[@"timestamp"]]];
     
     return cell;
     
 }
+
 
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
