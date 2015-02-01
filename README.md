@@ -12,7 +12,7 @@ Testing:
 Code is unit tested using XCTest.
 
 Third party library:
+ 1. AFNetworking : For networking and caching.
+ 2. SVPullToRefresh: For infinite scrolling.
 
-I have used AFNetworking networking library.
-I have implemented caching technique using AFNetworking to cache search results.
 
